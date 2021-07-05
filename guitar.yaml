@@ -1,0 +1,30 @@
+esphome:
+  name: guitar
+  platform: ESP8266
+  board: d1_mini
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+  password: ""
+
+ota:
+  password: ""
+
+wifi:
+  ssid: "Ziggo0590921"
+  password: "xvvt3DtLdyqh"
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "Guitar Fallback Hotspot"
+    password: "UTxTJ7mHKvWn"
+
+captive_portal:
+
+i2c:
+  sda: D2
+  scl: D1
+  scan: true
