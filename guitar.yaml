@@ -8,24 +8,6 @@ esphome:
 # Enable logging
 logger:
 
-# Enable Home Assistant API
-api:
-  password: ""
-
-ota:
-  password: ""
-
-wifi:
-  ssid: "Ziggo0590921"
-  password: "xvvt3DtLdyqh"
-
-  # Enable fallback hotspot (captive portal) in case wifi connection fails
-  ap:
-    ssid: "Guitar Fallback Hotspot"
-    password: "UTxTJ7mHKvWn"
-
-captive_portal:
-
 i2c:
   scan: false
 
