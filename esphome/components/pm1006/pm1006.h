@@ -20,16 +20,14 @@ class PM1006Component : public PollingComponent, public uart::UARTDevice {
   float get_setup_priority() const override;
 
  protected:
-  optional<bool> check_byte_() const;
-  void parse_data_();
+std::vector<uint8_t> make_request_(const uint8_t* cmd, const uint8_t len);
+  void parse_data_() const;
   uint16_t get_16_bit_uint_(uint8_t start_index) const;
-  uint8_t pm1006_checksum_(const uint8_t *command_data, uint8_t length) const;
+  uint8_t pm1006_checksum_(const std::vector<uint8_t> data) const;
 
   sensor::Sensor *pm_2_5_sensor_{nullptr};
 
-  uint8_t data_[20];
-  uint8_t data_index_{0};
-  uint32_t last_transmission_{0};
+  std::vector<uint8_t> data_;
 };
 
 }  // namespace pm1006
