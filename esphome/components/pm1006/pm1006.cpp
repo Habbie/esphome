@@ -9,11 +9,16 @@ static const char *const TAG = "pm1006";
 static const uint8_t PM1006_REQUEST = 0x11;
 static const uint8_t PM1006_RESPONSE = 0x16;
 
-static const uint8_t PM1006_REQ_PM25[] = {0x0B, 0x01};
+static const uint8_t PM1006_CMD_PM25 = 0x0B;
+static const uint8_t PM1006_CMD_DATA_PM25[] = {0x01};
 
-#define WRAPCMD(cmd) cmd, sizeof(cmd)
+static const uint8_t PM1006_CMD_VERSION = 0x1E;
+
+#define WRAPDATA(data) data, sizeof(data)
+
 void PM1006Component::setup() {
-  // because this implementation is currently rx-only, there is nothing to setup
+  std::vector<uint8_t> req = make_request_(PM1006_CMD_VERSION);
+  this->write_array(req);
 }
 
 void PM1006Component::dump_config() {
@@ -22,14 +27,17 @@ void PM1006Component::dump_config() {
   this->check_uart_settings(9600);
 }
 
-std::vector<uint8_t> PM1006Component::make_request_(const uint8_t* cmd, const uint8_t len)
+std::vector<uint8_t> PM1006Component::make_request_(const uint8_t cmd, const uint8_t* data, const uint8_t len)
 {
   std::vector<uint8_t> req;
   req.reserve(1 + 1 + len + 1); // PM1006_REQUEST + LEN + cmd + CHECKSUM
   req.push_back(PM1006_REQUEST);
-  req.push_back(len);
-  for (uint8_t i = 0; i < len; i++)
-    req.push_back(cmd[i]);
+  req.push_back(len+1); // +1 for the cmd
+  req.push_back(cmd);
+  if (data) {
+    for (uint8_t i = 0; i < len; i++)
+      req.push_back(data[i]);
+  }
 
   uint8_t sum = pm1006_checksum_(req);
   req.push_back(256 - sum);
@@ -38,7 +46,7 @@ std::vector<uint8_t> PM1006Component::make_request_(const uint8_t* cmd, const ui
 }
 
 void PM1006Component::update() {
-  std::vector<uint8_t> req = make_request_(WRAPCMD(PM1006_REQ_PM25));
+  std::vector<uint8_t> req = make_request_(PM1006_CMD_PM25, WRAPDATA(PM1006_CMD_DATA_PM25));
   ESP_LOGV(TAG, "sending measurement request");
   this->write_array(req);
 }
@@ -110,14 +118,32 @@ uint8_t PM1006Component::pm1006_checksum_(const std::vector<uint8_t> data) const
 }
 
 void PM1006Component::parse_data_() const {
-  if (data_.at(2) == PM1006_REQ_PM25[0]) {
-    const int pm_2_5_concentration = this->get_16_bit_uint_(5);
+  uint8_t msgtype = data_.at(2);
 
-    ESP_LOGD(TAG, "Got PM2.5 Concentration: %d µg/m³", pm_2_5_concentration);
+  switch (msgtype) {
+    case PM1006_CMD_PM25: {
+      const int pm_2_5_concentration = this->get_16_bit_uint_(5);
 
-    if (this->pm_2_5_sensor_ != nullptr) {
-      this->pm_2_5_sensor_->publish_state(pm_2_5_concentration);
+      ESP_LOGD(TAG, "Got PM2.5 Concentration: %d µg/m³", pm_2_5_concentration);
+
+      if (this->pm_2_5_sensor_ != nullptr) {
+        this->pm_2_5_sensor_->publish_state(pm_2_5_concentration);
+      }
+      break;
     }
+    case PM1006_CMD_VERSION: {
+      std::string version;
+      for (uint8_t i = 3; i < data_.size() - 1; i++)
+        version.push_back(data_.at(i));
+      ESP_LOGD(TAG, "Got version number: %s", version.c_str());
+      break;
+    }
+    default:
+      ESP_LOGD(TAG, "Got unknown message type from sensor: ");
+      ESP_LOGD(TAG, "  Length: %d", data_.at(1));
+      ESP_LOGD(TAG, "  Type: %02x", data_.at(2));
+      ESP_LOGD(TAG, "  Full message: %s", hexencode(data_).c_str());
+      break;
   }
 }
 
