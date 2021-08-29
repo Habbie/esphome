@@ -13,11 +13,14 @@ static const uint8_t PM1006_CMD_PM25 = 0x0B;
 static const uint8_t PM1006_CMD_DATA_PM25[] = {0x01};
 
 static const uint8_t PM1006_CMD_VERSION = 0x1E;
+static const uint8_t PM1006_CMD_SERIAL_NUMBER = 0x1F;
 
 #define WRAPDATA(data) data, sizeof(data)
 
 void PM1006Component::setup() {
-  std::vector<uint8_t> req = make_request_(PM1006_CMD_VERSION);
+  auto req = make_request_(PM1006_CMD_VERSION);
+  this->write_array(req);
+  req = make_request_(PM1006_CMD_SERIAL_NUMBER);
   this->write_array(req);
 }
 
