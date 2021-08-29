@@ -110,17 +110,19 @@ uint8_t PM1006Component::pm1006_checksum_(const std::vector<uint8_t> data) const
 }
 
 void PM1006Component::parse_data_() const {
-  const int pm_2_5_concentration = this->get_16_bit_uint_(5);
+  if (data_.at(2) == PM1006_REQ_PM25[0]) {
+    const int pm_2_5_concentration = this->get_16_bit_uint_(5);
 
-  ESP_LOGD(TAG, "Got PM2.5 Concentration: %d µg/m³", pm_2_5_concentration);
+    ESP_LOGD(TAG, "Got PM2.5 Concentration: %d µg/m³", pm_2_5_concentration);
 
-  if (this->pm_2_5_sensor_ != nullptr) {
-    this->pm_2_5_sensor_->publish_state(pm_2_5_concentration);
+    if (this->pm_2_5_sensor_ != nullptr) {
+      this->pm_2_5_sensor_->publish_state(pm_2_5_concentration);
+    }
   }
 }
 
 uint16_t PM1006Component::get_16_bit_uint_(uint8_t start_index) const {
-  return encode_uint16(this->data_[start_index], this->data_[start_index + 1]);
+  return encode_uint16(this->data_.at(start_index), this->data_.at(start_index + 1));
 }
 
 }  // namespace pm1006
