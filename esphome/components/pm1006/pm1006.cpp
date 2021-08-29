@@ -10,7 +10,7 @@ static const uint8_t PM1006_REQUEST = 0x11;
 static const uint8_t PM1006_RESPONSE = 0x16;
 
 static const uint8_t PM1006_CMD_PM25 = 0x0B;
-static const uint8_t PM1006_CMD_DATA_PM25[] = {0x01};
+static const uint8_t PM1006_CMD_DATA_PM25[] = {0x01}; // FIXME: 0x07 here leads to a crash! because the response message has PM1006_CMD_PM25 but the data section is empty, and we try to .at(5) which is one byte beyond the end of an empty message and the exception from .at bubbles all the way up to a full ESP crash
 
 static const uint8_t PM1006_CMD_VERSION = 0x1E;
 static const uint8_t PM1006_CMD_SERIAL_NUMBER = 0x1F;
