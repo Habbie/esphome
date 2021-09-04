@@ -27,14 +27,21 @@ void PM1006Component::setup() {
 void PM1006Component::dump_config() {
   ESP_LOGCONFIG(TAG, "PM1006:");
   LOG_SENSOR("  ", "PM2.5", this->pm_2_5_sensor_);
-  this->check_uart_settings(9600);
+  ESP_LOGCONFIG(TAG, "  Reversed mode: %s", ONOFF(this->reversed_));
+  LOG_UPDATE_INTERVAL(this);
+  this->check_uart_settings(9600); // FIXME: can go, part of config validation now
 }
 
 std::vector<uint8_t> PM1006Component::make_request_(const uint8_t cmd, const uint8_t* data, const uint8_t len)
 {
+  return make_frame_(PM1006_REQUEST, cmd, data, len);
+}
+
+std::vector<uint8_t> PM1006Component::make_frame_(const uint8_t header, const uint8_t cmd, const uint8_t* data, const uint8_t len)
+{
   std::vector<uint8_t> req;
-  req.reserve(1 + 1 + len + 1); // PM1006_REQUEST + LEN + cmd + CHECKSUM
-  req.push_back(PM1006_REQUEST);
+  req.reserve(1 + 1 + len + 1); // PM1006_REQUEST/RESPONSE + LEN + cmd + CHECKSUM
+  req.push_back(header);
   req.push_back(len+1); // +1 for the cmd
   req.push_back(cmd);
   if (data) {
@@ -61,16 +68,18 @@ void PM1006Component::loop() {
   data_.resize(0);
   data_.reserve(20);
   uint8_t len = 0, checksum = 0;
+  uint8_t expected_header = reversed_ ? PM1006_REQUEST : PM1006_RESPONSE;
   while (state != RXState::GotChecksum && this->available() != 0) {
     uint8_t byte;
     this->read_byte(&byte);
     switch (state) {
       case RXState::Begin:
-        if (byte == PM1006_RESPONSE) {
+        if (byte == expected_header) {
           data_.push_back(byte);
           state = RXState::GotHeader;
         }
         else {
+          ESP_LOGW(TAG, "PM1006: got wrong header (%02x), expected %02x", byte, expected_header);
           state = RXState::Invalid;
         }
         break;
@@ -120,11 +129,17 @@ uint8_t PM1006Component::pm1006_checksum_(const std::vector<uint8_t> data) const
   return sum;
 }
 
-void PM1006Component::parse_data_() const {
+void PM1006Component::parse_data_() {
   uint8_t msgtype = data_.at(2);
 
   switch (msgtype) {
     case PM1006_CMD_PM25: {
+      if (reversed_) {
+        std::vector<uint8_t> data = {0, 0, 0, 80 /* DF4 */, 0, 0, 0, 0 /* DF8 */, 0, 0, 0, 0 /* DF12 */, 0, 0, 0, 0 /* DF16 */};
+        auto response = make_frame_(PM1006_RESPONSE, PM1006_CMD_PM25, data.data(), data.size());
+        this->write_array(response);
+        break;
+      }
       const int pm_2_5_concentration = this->get_16_bit_uint_(5);
 
       ESP_LOGD(TAG, "Got PM2.5 Concentration: %d µg/m³", pm_2_5_concentration);

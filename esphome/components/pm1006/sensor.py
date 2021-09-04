@@ -4,6 +4,7 @@ from esphome.components import sensor, uart
 from esphome.const import (
     CONF_ID,
     CONF_PM_2_5,
+    CONF_REVERSED,
     CONF_UPDATE_INTERVAL,
     STATE_CLASS_MEASUREMENT,
     UNIT_MICROGRAMS_PER_CUBIC_METER,
@@ -27,6 +28,7 @@ CONFIG_SCHEMA = cv.All(
                 accuracy_decimals=0,
                 state_class=STATE_CLASS_MEASUREMENT,
             ),
+            cv.Optional(CONF_REVERSED, default=False): cv.boolean,
         }
     )
     .extend(cv.COMPONENT_SCHEMA)
@@ -60,3 +62,5 @@ async def to_code(config):
     if CONF_PM_2_5 in config:
         sens = await sensor.new_sensor(config[CONF_PM_2_5])
         cg.add(var.set_pm_2_5_sensor(sens))
+
+    cg.add(var.set_reversed(config[CONF_REVERSED]))
