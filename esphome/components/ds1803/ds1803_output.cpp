@@ -10,6 +10,7 @@ static const char *const TAG = "ds1803";
 
 static const uint8_t DS1803_WRITE_CHANNEL_0 = 0xA9;
 static const uint8_t DS1803_WRITE_CHANNEL_1 = 0xAA;
+// FIXME: add third channel (channel 2) that writes to both pots at the same time?
 
 void DS1803Output::setup() {
   ESP_LOGCONFIG(TAG, "Setting up DS1803OutputComponent...");
